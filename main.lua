@@ -179,7 +179,7 @@ local function drawGame()
 
     love.graphics.setCanvas(grid.canvas)
     drawGrid()
-    love.graphics.setCanvas()
+    love.graphics.setCanvas(game.canvas)
     local gridXStart = game.width / 2 - 5 * blockSize
     local gridXEnd = game.width / 2 + 5 * blockSize
     love.graphics.line(gridXStart, headerHeight, gridXStart, game.height)
