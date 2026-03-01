@@ -1,26 +1,11 @@
 local utils = require("utils")
+local inputMap = require("data.inputMap")
 
 local M = {}
 
 local headerHeight = 30
 local blockSize = 28.5
 
-local inputMap = {
-    drop = {
-        hard = "space",
-        soft = "down",
-    },
-    rotate = {
-        left = "a",
-        right = "s",
-        double = "up",
-    },
-    left = "left",
-    right = "right",
-    restart = "r",
-    rebind = "f1",
-    quit = "escape",
-}
 
 local defaultGame = {
     grid = {

@@ -13,7 +13,7 @@ local window = {
 function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
     math.randomseed(os.time())
-    game = require("game")
+    game = require("mut.game")
     print(game)
     love.graphics.setBackgroundColor(
         color,
