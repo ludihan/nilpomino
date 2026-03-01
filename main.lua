@@ -1,6 +1,6 @@
 local utils = require("utils")
 
-local Game
+local game
 
 local color = 26 / 255
 
@@ -11,41 +11,38 @@ local window = {
 
 
 function love.load()
+    love.graphics.setDefaultFilter('nearest', 'nearest')
     math.randomseed(os.time())
-    Game = require("game").newGame()
+    game = require("game")
+    print(game)
     love.graphics.setBackgroundColor(
         color,
         color,
         color
     )
-    love.graphics.setDefaultFilter('nearest', 'nearest')
-    GameCanvas = love.graphics.newCanvas(800, 600)
 end
 
 function love.draw()
-    love.graphics.setCanvas(GameCanvas)
-    love.graphics.clear()
-    Game:drawGame()
-    love.graphics.setCanvas()
+    game:draw()
 
     window.width = love.graphics.getWidth()
     window.height = love.graphics.getHeight()
 
     local scale = math.min(
-        window.width / Game.width,
-        window.height / Game.height
+        window.width / game.width,
+        window.height / game.height
     )
 
-    local offsetX = (window.width - Game.width * scale) / 2
-    local offsetY = (window.height - Game.height * scale) / 2
+    local offsetX = (window.width - game.width * scale) / 2
+    local offsetY = (window.height - game.height * scale) / 2
 
-    love.graphics.draw(Game.canvas, offsetX, offsetY, 0, scale, scale)
+    love.graphics.draw(game.canvas, offsetX, offsetY, 0, scale, scale)
 end
 
 function love.update(dt)
-    Game:update(dt)
+    game:update(dt)
 end
 
 function love.keypressed(key, scancode, isrepeat)
-    Game:keypressed(key, scancode, isrepeat)
+    game:keypressed(key, scancode, isrepeat)
 end

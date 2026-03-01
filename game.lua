@@ -89,23 +89,8 @@ local function newBag()
     return keys
 end
 
-function M.newGame()
-    local game = utils.tableCopy(defaultGame)
-    game.grid.canvas = love.graphics.newCanvas(11 * blockSize, 21 * blockSize)
-
-    game.bag.current = newBag()
-    game.bag.next = newBag()
-
-    game.font = love.graphics.newImageFont("res/imagefont.png",
-        " 0123456789L:|."
-    )
-    love.graphics.setFont(game.font)
-
-    return game
-end
 
 function M:update(dt)
-    self:update(dt)
     self.timeElapsed = self.timeElapsed + dt
 
     if self.shouldGetPiece then
@@ -137,8 +122,10 @@ function M:drawGrid()
     local currentPiece = table.remove(self.bag.current)
 end
 
-function M:drawGame()
-    -- love.graphics.line(0, headerHeight, game.width, headerHeight)
+function M:draw()
+    love.graphics.setCanvas(self.canvas)
+
+    love.graphics.clear()
     love.graphics.setColor(1, 1, 1, 1)
 
     local time = utils.timeConvert(self.timeElapsed)
@@ -152,6 +139,8 @@ function M:drawGame()
     local gridXStart = self.width / 2 - 5 * blockSize
     local gridXEnd = self.width / 2 + 5 * blockSize
     love.graphics.draw(self.grid.canvas, gridXStart, headerHeight)
+
+    love.graphics.setCanvas()
 end
 
 local function rebindKeys()
@@ -176,5 +165,26 @@ function M:keypressed(key, scancode, isrepeat)
         self.lastPressed = inputMap.right
     end
 end
+
+local function start()
+    local newGame = utils.tableCopy(defaultGame)
+    newGame.grid.canvas = love.graphics.newCanvas(11 * blockSize, 21 * blockSize)
+
+    newGame.bag.current = newBag()
+    newGame.bag.next = newBag()
+
+    newGame.font = love.graphics.newImageFont("res/imagefont.png",
+        " 0123456789L:|."
+    )
+    love.graphics.setFont(newGame.font)
+
+    for k, v in pairs(newGame) do
+        M[k] = v
+    end
+
+    M.canvas = love.graphics.newCanvas(800, 600)
+end
+
+start()
 
 return M
