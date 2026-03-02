@@ -9,7 +9,7 @@ function M.tableCopy(t)
     return newT
 end
 
-function M.timeConvert(t)
+function M.secAndMinFromTime(t)
     local min = t / (60 * 60)
     local sec = t - min * 60
 

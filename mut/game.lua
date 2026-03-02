@@ -1,37 +1,29 @@
 local utils = require("utils")
 local inputMap = require("data.inputMap")
+local tetromino = require("data.tetromino")
 
 local M = {}
 
 local headerHeight = 30
 local blockSize = 28.5
 
+local function defaultGrid()
+    local t = {}
+    for i = 1, 10, 1 do
+        for j = 1, 20, 1 do
+            t[i] = {}
+            t[i][j] = nil
+        end
+    end
+    t[1][1] = "S*"
+    return t
+end
+
 
 local defaultGame = {
     grid = {
-        area = {
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-            { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-        },
-        canvas = nil
+        area = defaultGrid(),
+        canvas = nil,
     },
     width = 800,
     height = 600,
@@ -39,14 +31,12 @@ local defaultGame = {
     font = nil,
     timeElapsed = 0,
     linesCleared = 0,
-    currentPiece = nil,
     shouldGetPiece = false,
     bag = {
         current = nil,
         next = nil,
     },
     input = {
-        current = nil,
         up = false,
         left = false,
         down = false,
@@ -56,12 +46,28 @@ local defaultGame = {
             right = false
         }
     },
-    das = 133,
-    arr = 5,
-    ticks = 0,
-    lastDirection = nil,
+    speed = 1000,
+    das = 0.133,
+    arr = 0.5,
     shouldRepeat = false,
+    timePressingDirection = 0,
 }
+
+function M:tryMoveLeft()
+    local new = utils.tableCopy(self.grid.area)
+end
+
+function M:tryMoveRight()
+    for y = 1, #self.grid.area, 1 do
+        for x = 1, #self.grid.area[y], 1 do
+            local v = self.grid.area[y][x]
+            if not not v and v:sub(2, 2) == "*" and not self.grid.area[y][x + 1] then --moving piece
+                self.grid.area[y][x + 1] = v
+                self.grid.area[y][x + 0] = nil
+            end
+        end
+    end
+end
 
 local function newBag()
     local keys = { "I", "O", "T", "S", "Z", "J", "L" }
@@ -74,22 +80,34 @@ local function newBag()
     return keys
 end
 
+function M:getNewPiece()
+    local piece = table.remove(self.bag.current)
+    self.bag.current[#self.bag.current] = table.remove(self.bag.next)
+    if #self.bag.next == 0 then
+        self.bag.next = newBag()
+    end
+end
 
 function M:update(dt)
     self.timeElapsed = self.timeElapsed + dt
 
     if self.shouldGetPiece then
-        self.currentPiece = table.remove(self.bag.current)
+        self:getNewPiece()
         self.shouldGetPiece = false
     end
 
+
+    if self.timePressingDirection >= self.das then
+        -- print("repeat")
+    end
+
     if self.lastPressed then
-        self.ticks = self.ticks + dt
+        self.timePressingDirection = self.timePressingDirection + dt
     end
 
     if not love.keyboard.isDown(inputMap.right) and not love.keyboard.isDown(inputMap.left) then
         self.lastPressed = nil
-        self.ticks = 0
+        self.timePressingDirection = 0
     end
 end
 
@@ -104,7 +122,17 @@ function M:drawGrid()
         love.graphics.line(0, y, maxW, y)
     end
 
-    local currentPiece = table.remove(self.bag.current)
+    -- normal grid
+    for y, row in ipairs(self.grid.area) do
+        for x, v in ipairs(row) do
+            if v ~= 0 then
+                love.graphics.setColor(tetromino.color[v:sub(1, 1)])
+                love.graphics.rectangle("fill", (x - 1) * blockSize, (y - 1) * blockSize, blockSize, blockSize)
+            end
+        end
+    end
+
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 function M:draw()
@@ -113,7 +141,7 @@ function M:draw()
     love.graphics.clear()
     love.graphics.setColor(1, 1, 1, 1)
 
-    local time = utils.timeConvert(self.timeElapsed)
+    local time = utils.secAndMinFromTime(self.timeElapsed)
     love.graphics.setFont(self.font)
     local str = string.format("%dL %.25f", self.linesCleared, time.sec)
     love.graphics.print(string.sub(str, 0, 30), 0, 0, 0, 6)
@@ -141,13 +169,17 @@ function M:keypressed(key, scancode, isrepeat)
     end
 
     if key == inputMap.left then
-        self.ticks = 0
+        self.shouldRepeat = false
+        self.timePressingDirection = 0
         self.lastPressed = inputMap.left
+        self:tryMoveLeft()
     end
 
     if key == inputMap.right then
-        self.ticks = 0
+        self.shouldRepeat = false
+        self.timePressingDirection = 0
         self.lastPressed = inputMap.right
+        self:tryMoveRight()
     end
 end
 
@@ -168,6 +200,8 @@ local function start()
     end
 
     M.canvas = love.graphics.newCanvas(800, 600)
+
+    M.shouldGetPiece = true
 end
 
 start()

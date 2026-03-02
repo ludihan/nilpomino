@@ -14,7 +14,6 @@ function love.load()
     love.graphics.setDefaultFilter('nearest', 'nearest')
     math.randomseed(os.time())
     game = require("mut.game")
-    print(game)
     love.graphics.setBackgroundColor(
         color,
         color,
