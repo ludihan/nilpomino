@@ -9,13 +9,14 @@ local blockSize = 28.5
 
 local function defaultGrid()
     local t = {}
-    for i = 1, 10, 1 do
-        for j = 1, 20, 1 do
-            t[i] = {}
-            t[i][j] = nil
+    for y = 1, 20, 1 do
+        t[y] = {}
+        for x = 1, 10, 1 do
+            t[y][x] = false
         end
     end
-    t[1][1] = "S*"
+    t[2][4] = "S*"
+    t[3][5] = "S*"
     return t
 end
 
@@ -54,16 +55,31 @@ local defaultGame = {
 }
 
 function M:tryMoveLeft()
-    local new = utils.tableCopy(self.grid.area)
+    local new = self.grid.area
+    for y = 1, #new, 1 do
+        for x = 1, #new[y], 1 do
+            local v = new[y][x]
+            if x - 1 >= 1 and v and type(v) == "string" and v:sub(2, 2) == "*" and not new[y][x - 1] then --moving piece
+                print('l')
+                new[y][x + 0] = false
+                new[y][x - 1] = v
+                break
+            end
+        end
+    end
 end
 
 function M:tryMoveRight()
-    for y = 1, #self.grid.area, 1 do
-        for x = 1, #self.grid.area[y], 1 do
-            local v = self.grid.area[y][x]
-            if not not v and v:sub(2, 2) == "*" and not self.grid.area[y][x + 1] then --moving piece
-                self.grid.area[y][x + 1] = v
-                self.grid.area[y][x + 0] = nil
+    local new = self.grid.area
+    for y = 1, #new, 1 do
+        for x = 1, #new[y], 1 do
+            local v = new[y][x]
+            if x + 1 <= 10 and v and type(v) == "string" and v:sub(2, 2) == "*" and not new[y][x + 1] then --moving piece
+                print('r')
+                new[y][x - 1] = false
+                new[y][x + 0] = false
+                new[y][x + 1] = v
+                break
             end
         end
     end
@@ -98,7 +114,11 @@ function M:update(dt)
 
 
     if self.timePressingDirection >= self.das then
-        -- print("repeat")
+        if self.lastPressed == inputMap.left then
+            self:tryMoveLeft()
+        elseif self.lastPressed == inputMap.right then
+            self:tryMoveRight()
+        end
     end
 
     if self.lastPressed then
@@ -122,10 +142,10 @@ function M:drawGrid()
         love.graphics.line(0, y, maxW, y)
     end
 
-    -- normal grid
-    for y, row in ipairs(self.grid.area) do
-        for x, v in ipairs(row) do
-            if v ~= 0 then
+    for y = 1, #self.grid.area, 1 do
+        for x = 1, #self.grid.area[y], 1 do
+            local v = self.grid.area[y][x]
+            if type(v) == "string" then
                 love.graphics.setColor(tetromino.color[v:sub(1, 1)])
                 love.graphics.rectangle("fill", (x - 1) * blockSize, (y - 1) * blockSize, blockSize, blockSize)
             end
@@ -137,8 +157,8 @@ end
 
 function M:draw()
     love.graphics.setCanvas(self.canvas)
-
     love.graphics.clear()
+
     love.graphics.setColor(1, 1, 1, 1)
 
     local time = utils.secAndMinFromTime(self.timeElapsed)
@@ -147,7 +167,9 @@ function M:draw()
     love.graphics.print(string.sub(str, 0, 30), 0, 0, 0, 6)
 
     love.graphics.setCanvas(self.grid.canvas)
+    love.graphics.clear()
     self:drawGrid()
+
     love.graphics.setCanvas(self.canvas)
     local gridXStart = self.width / 2 - 5 * blockSize
     local gridXEnd = self.width / 2 + 5 * blockSize
