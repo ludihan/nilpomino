@@ -16,6 +16,8 @@ local function defaultGrid()
         end
     end
     t[2][4] = "S*"
+    t[3][3] = "S*"
+    t[3][4] = "S*"
     t[3][5] = "S*"
     return t
 end
