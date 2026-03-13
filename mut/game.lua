@@ -15,10 +15,6 @@ local function defaultGrid()
             t[y][x] = false
         end
     end
-    t[2][4] = "S*"
-    t[3][3] = "S*"
-    t[3][4] = "S*"
-    t[3][5] = "S*"
     return t
 end
 
@@ -33,12 +29,15 @@ local defaultGame = {
     canvas = nil,
     font = nil,
     timeElapsed = 0,
+    timeHoldingPiece = 0,
     linesCleared = 0,
     shouldGetPiece = false,
     bag = {
         current = nil,
         next = nil,
     },
+    currentPiece = nil,
+    ghost = nil,
     input = {
         up = false,
         left = false,
@@ -49,43 +48,12 @@ local defaultGame = {
             right = false
         }
     },
-    speed = 1000,
+    speed = 1,
     das = 0.133,
     arr = 0.5,
     shouldRepeat = false,
     timePressingDirection = 0,
 }
-
-function M:tryMoveLeft()
-    local new = self.grid.area
-    for y = 1, #new, 1 do
-        for x = 1, #new[y], 1 do
-            local v = new[y][x]
-            if x - 1 >= 1 and v and type(v) == "string" and v:sub(2, 2) == "*" and not new[y][x - 1] then --moving piece
-                print('l')
-                new[y][x + 0] = false
-                new[y][x - 1] = v
-                break
-            end
-        end
-    end
-end
-
-function M:tryMoveRight()
-    local new = self.grid.area
-    for y = 1, #new, 1 do
-        for x = 1, #new[y], 1 do
-            local v = new[y][x]
-            if x + 1 <= 10 and v and type(v) == "string" and v:sub(2, 2) == "*" and not new[y][x + 1] then --moving piece
-                print('r')
-                new[y][x - 1] = false
-                new[y][x + 0] = false
-                new[y][x + 1] = v
-                break
-            end
-        end
-    end
-end
 
 local function newBag()
     local keys = { "I", "O", "T", "S", "Z", "J", "L" }
@@ -98,18 +66,81 @@ local function newBag()
     return keys
 end
 
+local function createPieceBlocks(pieceType, offsetX, offsetY)
+    local shape = tetromino.shape[pieceType]
+    local blocks = {}
+    for y = 1, #shape do
+        for x = 1, #shape[y] do
+            if shape[y][x] then
+                table.insert(blocks, {
+                    x = x + offsetX,
+                    y = y + offsetY,
+                    type = pieceType
+                })
+            end
+        end
+    end
+    return blocks
+end
+
 function M:getNewPiece()
     local piece = table.remove(self.bag.current)
-    self.bag.current[#self.bag.current] = table.remove(self.bag.next)
-    if #self.bag.next == 0 then
+    if #self.bag.current == 0 then
+        self.bag.current = self.bag.next
         self.bag.next = newBag()
     end
+    self:spawnPiece(piece)
+end
+
+function M:spawnPiece(piece)
+    self.currentPiece = createPieceBlocks(piece, 3, 0)
+    self.ghost = self:cordsGhostPiece()
+end
+
+function M:tryMoveLeft()
+    if not self.currentPiece then return end
+
+    for _, v in ipairs(self.currentPiece) do
+        if v.x - 1 < 1 then
+            return
+        end
+        if self.grid.area[v.y] and self.grid.area[v.y][v.x - 1] then
+            return
+        end
+    end
+
+    for _, v in ipairs(self.currentPiece) do
+        v.x = v.x - 1
+    end
+
+    self.ghost = self:cordsGhostPiece()
+end
+
+function M:tryMoveRight()
+    if not self.currentPiece then return end
+
+    for _, v in ipairs(self.currentPiece) do
+        if v.x + 1 > 10 then
+            return
+        end
+        if self.grid.area[v.y] and self.grid.area[v.y][v.x + 1] then
+            return
+        end
+    end
+
+    for _, v in ipairs(self.currentPiece) do
+        v.x = v.x + 1
+    end
+
+    self.ghost = self:cordsGhostPiece()
 end
 
 function M:update(dt)
     self.timeElapsed = self.timeElapsed + dt
+    self.timeHoldingPiece = self.timeHoldingPiece + dt
 
     if self.shouldGetPiece then
+        self:placePiece()
         self:getNewPiece()
         self.shouldGetPiece = false
     end
@@ -131,6 +162,43 @@ function M:update(dt)
         self.lastPressed = nil
         self.timePressingDirection = 0
     end
+
+    if self.timeHoldingPiece >= self.speed then
+        M:pieceDescent()
+        self.timeHoldingPiece = 0
+    end
+end
+
+function M:pieceDescent()
+    if not self.currentPiece then return end
+
+    for _, v in ipairs(self.currentPiece) do
+        if v.y + 1 > 20 then
+            self.shouldGetPiece = true
+            return
+        end
+        if self.grid.area[v.y + 1] and self.grid.area[v.y + 1][v.x] then
+            self.shouldGetPiece = true
+            return
+        end
+    end
+
+    for _, v in ipairs(self.currentPiece) do
+        v.y = v.y + 1
+    end
+
+    self.ghost = self:cordsGhostPiece()
+end
+
+function M:placePiece()
+    if not self.currentPiece then return end
+
+    for _, v in ipairs(self.currentPiece) do
+        if v.y >= 1 and v.y <= 20 and v.x >= 1 and v.x <= 10 then
+            self.grid.area[v.y][v.x] = v.type
+        end
+    end
+    self.currentPiece = nil
 end
 
 function M:drawGrid()
@@ -147,14 +215,65 @@ function M:drawGrid()
     for y = 1, #self.grid.area, 1 do
         for x = 1, #self.grid.area[y], 1 do
             local v = self.grid.area[y][x]
-            if type(v) == "string" then
-                love.graphics.setColor(tetromino.color[v:sub(1, 1)])
+            if v then
+                love.graphics.setColor(tetromino.color[v])
                 love.graphics.rectangle("fill", (x - 1) * blockSize, (y - 1) * blockSize, blockSize, blockSize)
             end
         end
     end
 
+    if self.ghost then
+        for _, v in ipairs(self.ghost) do
+            local c = {
+                tetromino.color[v.type][1],
+                tetromino.color[v.type][2],
+                tetromino.color[v.type][3],
+                0.9
+            }
+            love.graphics.setColor(c)
+            love.graphics.rectangle("fill", (v.x - 1) * blockSize, (v.y - 1) * blockSize, blockSize, blockSize)
+        end
+    end
+
+    if self.currentPiece then
+        for _, v in ipairs(self.currentPiece) do
+            love.graphics.setColor(tetromino.color[v.type])
+            love.graphics.rectangle("fill", (v.x - 1) * blockSize, (v.y - 1) * blockSize, blockSize, blockSize)
+        end
+    end
+
     love.graphics.setColor(1, 1, 1, 1)
+end
+
+function M:cordsGhostPiece()
+    if not self.currentPiece then return nil end
+
+    local cords = {}
+    for _, v in ipairs(self.currentPiece) do
+        table.insert(cords, { x = v.x, y = v.y, type = v.type })
+    end
+
+    local canMove = true
+    while canMove do
+        for _, v in ipairs(cords) do
+            if v.y + 1 > 20 then
+                canMove = false
+                break
+            end
+            if self.grid.area[v.y + 1] and self.grid.area[v.y + 1][v.x] then
+                canMove = false
+                break
+            end
+        end
+        if canMove then
+            for _, v in ipairs(cords) do
+                v.y = v.y + 1
+            end
+        else
+            break
+        end
+    end
+    return cords
 end
 
 function M:draw()

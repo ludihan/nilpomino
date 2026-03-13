@@ -11,6 +11,7 @@ local window = {
 
 
 function love.load()
+    love.graphics.setLineWidth(2)
     love.graphics.setDefaultFilter('nearest', 'nearest')
     math.randomseed(os.time())
     game = require("mut.game")
