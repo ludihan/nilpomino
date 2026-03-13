@@ -48,7 +48,7 @@ local defaultGame = {
             right = false
         }
     },
-    speed = 1,
+    speed = 0.05,
     das = 0.133,
     arr = 0.5,
     shouldRepeat = false,
@@ -135,6 +135,36 @@ function M:tryMoveRight()
     self.ghost = self:cordsGhostPiece()
 end
 
+function M:tryRotateLeft()
+
+end
+
+function M:tryRotateRight()
+end
+
+function M:tryRotateDouble()
+end
+
+function M:clearRows()
+    local function isFull(row)
+        local should = true
+        for _, v in ipairs(row) do
+            if not v then
+                should = false
+                break
+            end
+        end
+        return should
+    end
+
+    for i, v in ipairs(self.grid.area) do
+        if isFull(v) then
+            table.remove(self.grid.area, i)
+            table.insert(self.grid.area,1,utils.tableFalseN(10))
+        end
+    end
+end
+
 function M:update(dt)
     self.timeElapsed = self.timeElapsed + dt
     self.timeHoldingPiece = self.timeHoldingPiece + dt
@@ -142,6 +172,7 @@ function M:update(dt)
     if self.shouldGetPiece then
         self:placePiece()
         self:getNewPiece()
+        self:clearRows()
         self.shouldGetPiece = false
     end
 
@@ -323,6 +354,18 @@ function M:keypressed(key, scancode, isrepeat)
         self.timePressingDirection = 0
         self.lastPressed = inputMap.right
         self:tryMoveRight()
+    end
+
+    if key == inputMap.rotate.left then
+        self:tryRotateLeft()
+    end
+
+    if key == inputMap.rotate.right then
+        self:tryRotateRight()
+    end
+
+    if key == inputMap.rotate.double then
+        self:tryRotateDouble()
     end
 end
 

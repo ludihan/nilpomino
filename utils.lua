@@ -19,4 +19,13 @@ function M.secAndMinFromTime(t)
     }
 end
 
+function M.tableFalseN(n)
+    local newT = {}
+    for i = 1, n do
+        newT[i] = false
+    end
+
+    return newT
+end
+
 return M
